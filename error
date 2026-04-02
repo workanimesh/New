@@ -1,0 +1,64 @@
+-- Table: public.rd_application_dtls
+
+-- DROP TABLE IF EXISTS public.rd_application_dtls;
+
+CREATE TABLE IF NOT EXISTS public.rd_application_dtls
+(
+    rad_id numeric NOT NULL DEFAULT nextval('rd_application_dtls_seq'::regclass),
+    rad_applicantid numeric NOT NULL,
+    rad_name character varying(200) COLLATE pg_catalog."default",
+    rad_dob date,
+    rad_pan_no character varying(50) COLLATE pg_catalog."default",
+    rad_mobile_country_code character varying(10) COLLATE pg_catalog."default",
+    rad_mobile character varying(50) COLLATE pg_catalog."default",
+    rad_email character varying(100) COLLATE pg_catalog."default",
+    rad_applicant_status character(10) COLLATE pg_catalog."default" NOT NULL DEFAULT 'N'::bpchar,
+    rad_applicant_accepted_date timestamp without time zone,
+    rad_signzy_flag character(1) COLLATE pg_catalog."default" NOT NULL DEFAULT 'N'::bpchar,
+    rad_signzy_application_type character(2) COLLATE pg_catalog."default",
+    rad_signzy_constitution_type character(2) COLLATE pg_catalog."default",
+    rad_signzy_kyc_type character(5) COLLATE pg_catalog."default" DEFAULT 'CKYC'::bpchar,
+    rad_signzy_applicant_prefix text COLLATE pg_catalog."default",
+    rad_signzy_applicant_name text COLLATE pg_catalog."default",
+    rad_signzy_applicant_dob date,
+    rad_signzy_applicant_pan text COLLATE pg_catalog."default",
+    rad_signzy_address_change_flag character(1) COLLATE pg_catalog."default",
+    rad_signzy_request jsonb,
+    rad_signzy_response jsonb,
+    rad_signzy_document_flag character(1) COLLATE pg_catalog."default" DEFAULT 'N'::bpchar,
+    rad_signzy_fetched_date timestamp without time zone,
+    rad_signzy_remark text COLLATE pg_catalog."default",
+    rad_cersai_batch_id numeric,
+    rad_cersai_batch_generation_date timestamp without time zone,
+    rad_cersai_batch_generation_by text COLLATE pg_catalog."default",
+    rad_cersai_batch_status numeric(1,0) DEFAULT '0'::numeric,
+    rad_cersai_batch_remark text COLLATE pg_catalog."default",
+    rad_cersai_batch_response_dtls text COLLATE pg_catalog."default",
+    rad_cersai_batch_response_date timestamp without time zone,
+    rad_cersai_ckyc_reference_no text COLLATE pg_catalog."default",
+    rad_cersai_reference_number text COLLATE pg_catalog."default",
+    rad_email_notification_flag character(1) COLLATE pg_catalog."default" DEFAULT 'N'::bpchar,
+    rad_email_sent_date timestamp without time zone,
+    rad_created_on timestamp without time zone DEFAULT now(),
+    rad_created_by text COLLATE pg_catalog."default",
+    rad_update_on timestamp without time zone,
+    rad_updated_by text COLLATE pg_catalog."default",
+    rad_signzy_ckyc_no character varying(20) COLLATE pg_catalog."default",
+    rad_remarks character(1) COLLATE pg_catalog."default",
+    CONSTRAINT rd_application_dtls_pkey PRIMARY KEY (rad_applicantid, rad_applicant_status)
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.rd_application_dtls
+    OWNER to pg_database_owner;
+
+-- Trigger: trg_rad_application_dtls
+
+-- DROP TRIGGER IF EXISTS trg_rad_application_dtls ON public.rd_application_dtls;
+
+CREATE OR REPLACE TRIGGER trg_rad_application_dtls
+    AFTER DELETE OR UPDATE 
+    ON public.rd_application_dtls
+    FOR EACH ROW
+    EXECUTE FUNCTION public.func_rad_application_dtls_audit();
