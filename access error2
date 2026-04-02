@@ -1,0 +1,875 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Data;
+using Npgsql;
+using System.Configuration;
+using RetailCommon;
+using System.Web;
+public class dataAccess
+{
+
+    static string strRDConnString = ConfigurationManager.AppSettings["RDConnection"];
+    static string strCCILConnString = ConfigurationManager.AppSettings["CCILConnection"];
+    static NpgsqlConnection npgsqlConn = new NpgsqlConnection();
+    static NpgsqlDataAdapter npgDataAdapter = new NpgsqlDataAdapter();
+    static NpgsqlCommand npgcom = new NpgsqlCommand();
+    static NpgsqlDataReader npgreader;
+
+    public static int checkApplicantId(long lngAppId)
+    {
+        int intAppIdCount = 0;
+        DataSet dsAppID = new DataSet();
+        try
+        {
+            npgsqlConn = new NpgsqlConnection(strCCILConnString);
+            if (npgsqlConn.State == ConnectionState.Closed) npgsqlConn.Open();
+            StringBuilder sb = new StringBuilder();
+            sb.Append("SELECT func_checkapplicantid(" + lngAppId + ")");
+            npgcom = new NpgsqlCommand(sb.ToString(), npgsqlConn);
+            npgcom.CommandType = CommandType.Text;
+            npgreader = npgcom.ExecuteReader();
+
+            if (npgreader.HasRows == true)
+            {
+                while (npgreader.Read())
+                {
+                    intAppIdCount = Convert.ToInt16(npgreader[0]);
+                }
+                npgreader.Close();
+            }
+
+
+        }
+        catch (Exception ex)
+        {
+            Common.WriteErrorsToTextFile("dataAccess.cs", "dataAccess.checkApplicantId", ex.Message, HttpContext.Current.Session["UserId"].ToString(), HttpContext.Current.Session["IP_Address"].ToString());
+        }
+        finally
+        {
+            if (npgsqlConn.State == ConnectionState.Open) npgsqlConn.Close();
+        }
+        return intAppIdCount;
+    }
+
+    //public static DataTable getPendingVKYCAppIdData(int inType, long lngAppId, string dtDate)
+    public static DataTable getPendingVKYCAppIdData(int inType, long lngAppId)
+    {
+        DataTable dtPendingAppID = new DataTable();
+        int intApplicationCount = Convert.ToInt32(ConfigurationManager.AppSettings["AppCount"]);
+        try
+        {
+            npgsqlConn = new NpgsqlConnection(strCCILConnString);
+            if (npgsqlConn.State == ConnectionState.Closed) npgsqlConn.Open();
+            StringBuilder sb = new StringBuilder();
+            sb.Append(" SELECT rad_id, rad_applicantid, rad_name, rad_dob, rad_pan_no, rad_mobile_country_code,");
+            sb.Append(" rad_mobile, rad_email, rad_applicant_status, rad_applicant_accepted_date, rad_signzy_flag,");
+            sb.Append(" rad_signzy_application_type, rad_signzy_constitution_type, rad_signzy_kyc_type, rad_signzy_applicant_prefix,");
+            sb.Append(" rad_signzy_applicant_name, rad_signzy_applicant_dob, rad_signzy_applicant_pan, ");
+            sb.Append(" rad_signzy_address_change_flag, rad_signzy_request, rad_signzy_response, ");
+            sb.Append(" rad_signzy_document_flag, rad_signzy_fetched_date, rad_signzy_remark, ");
+            sb.Append(" rad_created_on, rad_created_by, rad_update_on, rad_updated_by,rad_signzy_ckyc_no ");
+            sb.Append(" ,rad_dis_flag, rad_dis_type, rad_dis_percent, rad_dis_udid_no ");
+            sb.Append(" FROM  rd_application_dtls");
+            sb.Append(" WHERE rad_signzy_flag='Y'");
+            sb.Append(" AND rad_cersai_batch_status =0 ");
+            sb.Append(" AND rad_signzy_kyc_type = 'VCIP' ");
+            sb.Append(" AND rad_signzy_application_type in ('01','04','05')");
+            /// For Address change flag need to discuss
+            //sb.Append("and rad_signzy_address_change_flag='N'");
+            if (inType == 1)
+            {
+                sb.Append(" AND rad_applicantid= " + lngAppId + "  ");
+            }
+            //else
+            //{
+            //    sb.Append(" AND to_char(rad_created_on, 'DD/MM/YYYY') = '" + dtDate + "'");
+            //}
+            //sb.Append(" AND rad_applicant_accepted_date >= '2022-10-18'::date");
+            // for testing purpose start
+
+            sb.Append(" order by rad_applicantid desc");
+            // for testing purpose end
+
+            //sb.Append(" limit 30");
+            sb.Append(" limit " + intApplicationCount + "");
+
+            NpgsqlDataAdapter objDataAdapter = new NpgsqlDataAdapter(sb.ToString(), npgsqlConn);
+            objDataAdapter.Fill(dtPendingAppID);
+
+        }
+        catch (Exception ex)
+        {
+            Common.WriteErrorsToTextFile("dataAccess.cs", "dataAccess.getPendingAppIdData", ex.ToString(), HttpContext.Current.Session["UserId"].ToString(), HttpContext.Current.Session["IP_Address"].ToString());
+        }
+        finally
+        {
+            if (npgsqlConn.State == ConnectionState.Open) npgsqlConn.Close();
+        }
+        return dtPendingAppID;
+    }
+
+    public static DataTable getBalanceVKYCAppIdData(int intApplicationCount)
+    {
+        DataTable dtPendingAppID = new DataTable();
+        //int intApplicationCount = Convert.ToInt32(ConfigurationManager.AppSettings["AppCount"]);
+        try
+        {
+            npgsqlConn = new NpgsqlConnection(strCCILConnString);
+            if (npgsqlConn.State == ConnectionState.Closed) npgsqlConn.Open();
+            StringBuilder sb = new StringBuilder();
+            sb.Append(" SELECT rad_id, rad_applicantid, rad_name, rad_dob, rad_pan_no, rad_mobile_country_code,");
+            sb.Append(" rad_mobile, rad_email, rad_applicant_status, rad_applicant_accepted_date, rad_signzy_flag,");
+            sb.Append(" rad_signzy_application_type, rad_signzy_constitution_type, rad_signzy_kyc_type, rad_signzy_applicant_prefix,");
+            sb.Append(" rad_signzy_applicant_name, rad_signzy_applicant_dob, rad_signzy_applicant_pan, ");
+            sb.Append(" rad_signzy_address_change_flag, rad_signzy_request, rad_signzy_response, ");
+            sb.Append(" rad_signzy_document_flag, rad_signzy_fetched_date, rad_signzy_remark, ");
+            sb.Append(" rad_created_on, rad_created_by, rad_update_on, rad_updated_by,rad_signzy_ckyc_no ");
+            sb.Append(" ,rad_dis_flag, rad_dis_type, rad_dis_percent, rad_dis_udid_no ");
+            sb.Append(" FROM  rd_application_dtls");
+            sb.Append(" WHERE rad_signzy_flag='Y'");
+            sb.Append(" AND rad_cersai_batch_status =0 ");
+            sb.Append(" AND rad_signzy_kyc_type = 'VCIP' ");
+            sb.Append(" AND rad_signzy_application_type in ('01','04','05')");
+
+            sb.Append(" order by rad_applicantid desc");
+            // for testing purpose end
+            sb.Append(" limit " + intApplicationCount + "");
+
+            NpgsqlDataAdapter objDataAdapter = new NpgsqlDataAdapter(sb.ToString(), npgsqlConn);
+            objDataAdapter.Fill(dtPendingAppID);
+
+        }
+        catch (Exception ex)
+        {
+            Common.WriteErrorsToTextFile("dataAccess.cs", "dataAccess.getBalanceVKYCAppIdData", ex.ToString(), HttpContext.Current.Session["UserId"].ToString(), HttpContext.Current.Session["IP_Address"].ToString());
+        }
+        finally
+        {
+            if (npgsqlConn.State == ConnectionState.Open) npgsqlConn.Close();
+        }
+        return dtPendingAppID;
+    }
+
+    public int updateSignzyDataInDB(RetailSignzyData.SignzyData objSignzyApplicantData)
+    {
+        int intResult = 0;
+        try
+        {
+
+            npgsqlConn = new NpgsqlConnection(strCCILConnString);
+            if (npgsqlConn.State == ConnectionState.Closed) npgsqlConn.Open();
+
+
+            string strSignzyUpdatedResponse = objSignzyApplicantData.strSignzyResponse;
+            if (strSignzyUpdatedResponse == null)
+            {
+                strSignzyUpdatedResponse = "{ }";
+            }
+            string strSignzyUpdatedRemark = objSignzyApplicantData.strRemark;
+
+            if (strSignzyUpdatedRemark.Contains("'"))
+            {
+                strSignzyUpdatedRemark = strSignzyUpdatedRemark.Replace("'", "");
+                if (strSignzyUpdatedRemark.Contains('"'))
+                {
+                    strSignzyUpdatedRemark = strSignzyUpdatedRemark.Replace('"', ' ');
+                }
+            }
+
+            StringBuilder sb = new StringBuilder();
+            sb.Append("CALL public.sp_updatesignzydata('" + objSignzyApplicantData.strSignzyFlag + "','" + objSignzyApplicantData.strApplicationtype + "','" + objSignzyApplicantData.strConstitutiontype + "',");
+            sb.Append("'" + objSignzyApplicantData.strKycType + "','" + objSignzyApplicantData.strApplicantPrefix + "','" + objSignzyApplicantData.strApplicantName + "',");
+            sb.Append("'" + Convert.ToDateTime(objSignzyApplicantData.strApplicantDOB) + "','" + objSignzyApplicantData.strApplicantPan + "','" + objSignzyApplicantData.strAddressChangeFlag + "' ,");
+            sb.Append(" '" + objSignzyApplicantData.strSignzyRequest + "' , '" + strSignzyUpdatedResponse + "', '" + objSignzyApplicantData.strDocumentFlag + "',");
+            sb.Append("'" + Convert.ToDateTime(objSignzyApplicantData.strFetchedDate) + "','" + strSignzyUpdatedRemark + "','" + HttpContext.Current.Session["UserId"].ToString() + "' ," + objSignzyApplicantData.strApplicationId + ")");
+            npgcom = new NpgsqlCommand(sb.ToString(), npgsqlConn);
+
+            intResult = npgcom.ExecuteNonQuery();
+            if (intResult == 0)
+            {
+
+                Common.WriteErrorsToTextFile("dataAccess.cs", "dataAccess.updateSignzyDataInDB", objSignzyApplicantData.strApplicationId + "| Error occured while Insertion", HttpContext.Current.Session["UserId"].ToString(), HttpContext.Current.Session["IP_Address"].ToString());
+            }
+
+        }
+        catch (Exception ex)
+        {
+            Common.WriteErrorsToTextFile("dataAccess.cs", "dataAccess.updateSignzyDataInDB", ex.Message, HttpContext.Current.Session["UserId"].ToString(), HttpContext.Current.Session["IP_Address"].ToString());
+        }
+        finally
+        {
+            if (npgsqlConn.State == ConnectionState.Open) npgsqlConn.Close();
+        }
+        return intResult;
+    }
+
+    public static DataTable fetchUserDetails(string strUserName)
+    {
+        DataTable dtUserDetails = new DataTable();
+        try
+        {
+            npgsqlConn = new NpgsqlConnection(strCCILConnString);
+            if (npgsqlConn.State == ConnectionState.Closed) npgsqlConn.Open();
+            StringBuilder sb = new StringBuilder();
+            //sb.Append(" SELECT rcum_user_name, rcum_user_role, rcum_user_status,rcum_cersai_user_id,  ");
+            sb.Append(" SELECT rcum_user_id,rcum_user_name, rcum_user_role, rcum_user_status,rcum_cersai_user_id,  ");
+            sb.Append(" rcum_cersai_user_name, rcum_cersai_ficode, rcum_cersai_regioncode, rcum_cersai_branchcode, ");
+            sb.Append(" rcum_full_name, rcum_designation, rcum_branch, rcum_emp_code, rcum_org_name, rcum_org_code ");
+            sb.Append(" from rd_cersai_user_mst where lower(rcum_user_name)= '" + strUserName.ToLower() + "' and rcum_user_status='A' ");
+            NpgsqlDataAdapter objDataAdapter = new NpgsqlDataAdapter(sb.ToString(), npgsqlConn);
+            objDataAdapter.Fill(dtUserDetails);
+        }
+        catch (Exception ex)
+        {
+            Common.WriteErrorsToTextFile("dataAccess.cs", "dataAccess.fetchUserDetails", ex.ToString(), HttpContext.Current.Session["UserId"].ToString(), HttpContext.Current.Session["IP_Address"].ToString());
+        }
+        finally
+        {
+            if (npgsqlConn.State == ConnectionState.Open) npgsqlConn.Close();
+        }
+        return dtUserDetails;
+
+    }
+
+    public static int UpdateCersaiBatchIDDetails(long lngBatchId, DataTable dtApplicationDetails)
+    {
+        int intResult = 0;
+        try
+        {
+            npgsqlConn = new NpgsqlConnection(strCCILConnString);
+            if (npgsqlConn.State == ConnectionState.Closed) npgsqlConn.Open();
+
+            foreach (DataRow dr in dtApplicationDetails.Rows)
+            {
+                long longAppID = Convert.ToInt64(dr["rad_applicantid"]);
+
+                StringBuilder sb = new StringBuilder();
+
+                sb.Append(" UPDATE rd_application_dtls  SET  rad_cersai_batch_id=" + lngBatchId + ",");
+                sb.Append(" rad_cersai_batch_status=1, rad_cersai_batch_remark='Batch Initiatied', rad_update_on=now(), rad_updated_by='" + HttpContext.Current.Session["UserId"].ToString() + "'");
+                sb.Append(" WHERE rad_applicantid=" + longAppID + " and rad_cersai_batch_status=0");
+                npgcom = new NpgsqlCommand(sb.ToString(), npgsqlConn);
+
+                intResult = npgcom.ExecuteNonQuery();
+                if (intResult == 0)
+                {
+
+                    Common.WriteErrorsToTextFile("dataAccess.cs", "dataAccess.UpdateCersaiBatchIDDetails", "| Error occured while Insertion", HttpContext.Current.Session["UserId"].ToString(), HttpContext.Current.Session["IP_Address"].ToString());
+                }
+                else
+                {
+
+                }
+            }
+        }
+
+        catch (Exception ex)
+        {
+            Common.WriteErrorsToTextFile("dataAccess.cs", "dataAccess.UpdateCersaiBatchIDDetails", ex.Message, HttpContext.Current.Session["UserId"].ToString(), HttpContext.Current.Session["IP_Address"].ToString());
+        }
+        finally
+        {
+            if (npgsqlConn.State == ConnectionState.Open) npgsqlConn.Close();
+        }
+        return intResult;
+    }
+
+    public static int UpdateCersaiBatchIDStatus(long lngBatchId, long longAppID, string strKycRefNo, int intStatus)
+    {
+        int intResult = 0;
+        try
+        {
+
+            npgsqlConn = new NpgsqlConnection(strCCILConnString);
+            if (npgsqlConn.State == ConnectionState.Closed) npgsqlConn.Open();
+            StringBuilder sb = new StringBuilder();
+            if (intStatus == 2)
+            {
+                sb.Append(" UPDATE rd_application_dtls  SET  ");
+                sb.Append(" rad_cersai_batch_status=2, rad_cersai_batch_remark='Batch File Generated',  rad_cersai_batch_generation_date=now(),  rad_cersai_batch_generation_by='" + HttpContext.Current.Session["UserId"].ToString() + "', ");
+                sb.Append(" rad_update_on=now(), rad_updated_by='" + HttpContext.Current.Session["UserId"].ToString() + "'");
+                sb.Append(" ,rad_cersai_reference_number ='" + strKycRefNo + "'");
+                sb.Append(" WHERE rad_applicantid=" + longAppID + " and rad_cersai_batch_id=" + lngBatchId + " and rad_cersai_batch_status=1");
+            }
+            else if (intStatus == -2)
+            {
+                sb.Append(" UPDATE rd_application_dtls  SET  ");
+                sb.Append(" rad_cersai_batch_status=-2, rad_cersai_batch_remark='Technical Error', ");
+                sb.Append(" rad_update_on=now(), rad_updated_by='" + HttpContext.Current.Session["UserId"].ToString() + "'");
+                //sb.Append(" ,rad_cersai_reference_number ='" + strKycRefNo + "'");
+                sb.Append(" WHERE rad_applicantid=" + longAppID + " and rad_cersai_batch_id=" + lngBatchId + " and rad_cersai_batch_status=1");
+            }
+            npgcom = new NpgsqlCommand(sb.ToString(), npgsqlConn);
+
+            intResult = npgcom.ExecuteNonQuery();
+            if (intResult == 0)
+            {
+                Common.WriteErrorsToTextFile("dataAccess.cs", "dataAccess.UpdateCersaiBatchIDStatus", "| Error occured while updating bacth details", HttpContext.Current.Session["UserId"].ToString(), HttpContext.Current.Session["IP_Address"].ToString());
+            }
+            if (intStatus == -2)
+            {
+                Common.WriteErrorsToTextFile("dataAccess.cs", "dataAccess.UpdateCersaiBatchIDStatus for WriteApplicationDataInCersaiFormat", "| Error occured while updating bacth details", HttpContext.Current.Session["UserId"].ToString(), HttpContext.Current.Session["IP_Address"].ToString());
+            }
+        }
+
+        catch (Exception ex)
+        {
+            Common.WriteErrorsToTextFile("dataAccess.cs", "dataAccess.updateSignzyDataInDB", ex.Message, HttpContext.Current.Session["UserId"].ToString(), HttpContext.Current.Session["IP_Address"].ToString());
+        }
+        finally
+        {
+            if (npgsqlConn.State == ConnectionState.Open) npgsqlConn.Close();
+        }
+        return intResult;
+    }
+
+    public static string getDistrict(int intPincode)
+    {
+        string strDistrict = null;
+
+        try
+        {
+            npgsqlConn = new NpgsqlConnection(strCCILConnString);
+            if (npgsqlConn.State == ConnectionState.Closed) npgsqlConn.Open();
+            StringBuilder sb = new StringBuilder();
+            sb.Append("select rpm_district from rd_pincode_mst where rpm_pincode =" + intPincode + "");
+            npgcom = new NpgsqlCommand(sb.ToString(), npgsqlConn);
+            npgcom.CommandType = CommandType.Text;
+            npgreader = npgcom.ExecuteReader();
+
+            if (npgreader.HasRows == true)
+            {
+                while (npgreader.Read())
+                {
+                    strDistrict = (npgreader[0]).ToString();
+                }
+                npgreader.Close();
+            }
+
+        }
+        catch (Exception ex)
+        {
+            Common.WriteErrorsToTextFile("dataAccess.cs", "dataAccess.getDistrict", ex.ToString(), HttpContext.Current.Session["UserId"].ToString(), HttpContext.Current.Session["IP_Address"].ToString());
+        }
+        finally
+        {
+            if (npgsqlConn.State == ConnectionState.Open) npgsqlConn.Close();
+        }
+        return strDistrict;
+    }
+
+    public static string getFIRefNo()
+    {
+        string strFiRefNo = null;
+        try
+        {
+            string strTimeStamp = GetTimestamp(DateTime.Now);
+            strFiRefNo = strTimeStamp;
+        }
+        catch (Exception ex)
+        {
+            Common.WriteErrorsToTextFile("dataAccess.cs", "dataAccess.getDistrict", ex.ToString(), HttpContext.Current.Session["UserId"].ToString(), HttpContext.Current.Session["IP_Address"].ToString());
+        }
+        //finally
+        //{
+        //    if (npgsqlConn.State == ConnectionState.Open) npgsqlConn.Close();
+        //}
+        return strFiRefNo;
+    }
+
+    public static String GetTimestamp(DateTime value)
+    {
+        //return value.ToString("ddMMyyHHmmssffff");
+        return value.ToString("ddMMyyHHmmssffff");
+    }
+
+    #region Batch Master
+
+    public static long GenerateBatchID(DataTable dtApplicationDetails)
+    {
+        long lngBatchId = 0;
+        int intResult = 0;
+        try
+        {
+
+            lngBatchId = getMaxBatchID();
+
+            npgsqlConn = new NpgsqlConnection(strCCILConnString);
+            if (npgsqlConn.State == ConnectionState.Closed) npgsqlConn.Open();
+            StringBuilder sb = new StringBuilder();
+            sb.Append("INSERT INTO rd_batch_mst(rbm_cersai_batch_id,rbm_cersai_batch_count, rbm_cersai_batch_status,  rbm_cersai_batch_remark, rbm_created_by)");
+            sb.Append("VALUES (" + lngBatchId + ",'" + dtApplicationDetails.Rows.Count + "', 1, 'Batch Initiation','" + HttpContext.Current.Session["UserId"].ToString() + "' )");
+            npgcom = new NpgsqlCommand(sb.ToString(), npgsqlConn);
+
+            intResult = npgcom.ExecuteNonQuery();
+            if (intResult == 0)
+            {
+
+                Common.WriteErrorsToTextFile("dataAccess.cs", "dataAccess.GenerateBatchID", "| Error occured while Insertion", HttpContext.Current.Session["UserId"].ToString(), HttpContext.Current.Session["IP_Address"].ToString());
+            }
+            else
+            {
+                int intResult2 = UpdateCersaiBatchIDDetails(lngBatchId, dtApplicationDetails);
+            }
+        }
+
+        catch (Exception ex)
+        {
+            Common.WriteErrorsToTextFile("dataAccess.cs", "dataAccess.GenerateBatchID", ex.Message, HttpContext.Current.Session["UserId"].ToString(), HttpContext.Current.Session["IP_Address"].ToString());
+        }
+        finally
+        {
+            if (npgsqlConn.State == ConnectionState.Open) npgsqlConn.Close();
+        }
+
+        return lngBatchId;
+    }
+
+    public static long getMaxBatchID()
+    {
+        long lngBacthId = 1;
+        DataTable dt = new DataTable();
+        try
+        {
+            npgsqlConn = new NpgsqlConnection(strCCILConnString);
+            if (npgsqlConn.State == ConnectionState.Closed) npgsqlConn.Open();
+            StringBuilder sb = new StringBuilder();
+            //sb.Append(" SELECT Max(rbm_cersai_batch_id) as BATCH_ID from rd_batch_mst ");
+            sb.Append(" select nextval('rd_batch_mst_seq'::regclass) ");
+
+            NpgsqlDataAdapter objDataAdapter = new NpgsqlDataAdapter(sb.ToString(), npgsqlConn);
+            objDataAdapter.Fill(dt);
+            if (dt.Rows.Count > 0)
+            {
+                lngBacthId = Convert.ToInt32(dt.Rows[0][0].ToString()) + 1;
+            }
+            else
+            {
+                lngBacthId = 10001;
+            }
+        }
+        catch (Exception ex)
+        {
+            Common.WriteErrorsToTextFile("dataAccess.cs", "dataAccess.getMaxBatchID", ex.Message, HttpContext.Current.Session["UserId"].ToString(), HttpContext.Current.Session["IP_Address"].ToString());
+        }
+        finally
+        {
+            if (npgsqlConn.State == ConnectionState.Open) npgsqlConn.Close();
+        }
+        return lngBacthId;
+    }
+
+    public static int UpdateBatchMstStatus(long lngBatchId, string strZipFileName)
+    {
+        int intResult = 0;
+        try
+        {
+
+            npgsqlConn = new NpgsqlConnection(strCCILConnString);
+            if (npgsqlConn.State == ConnectionState.Closed) npgsqlConn.Open();
+
+            StringBuilder sb = new StringBuilder();
+
+            sb.Append(" UPDATE rd_batch_mst  SET  ");
+            sb.Append(" rbm_cersai_batch_status=2, rbm_cersai_batch_remark='Batch File Generation', rbm_cersai_batch_filename='" + strZipFileName + "' ");
+            sb.Append(" WHERE rbm_cersai_batch_id=" + lngBatchId + " and rbm_cersai_batch_status=1");
+            npgcom = new NpgsqlCommand(sb.ToString(), npgsqlConn);
+
+            intResult = npgcom.ExecuteNonQuery();
+            if (intResult == 0)
+            {
+
+                Common.WriteErrorsToTextFile("dataAccess.cs", "dataAccess.UpdateBatchMstStatus", "| Error occured while Insertion", HttpContext.Current.Session["UserId"].ToString(), HttpContext.Current.Session["IP_Address"].ToString());
+            }
+            else
+            {
+
+
+            }
+
+        }
+
+        catch (Exception ex)
+        {
+            Common.WriteErrorsToTextFile("dataAccess.cs", "dataAccess.updateSignzyDataInDB", ex.Message, HttpContext.Current.Session["UserId"].ToString(), HttpContext.Current.Session["IP_Address"].ToString());
+        }
+        finally
+        {
+            if (npgsqlConn.State == ConnectionState.Open) npgsqlConn.Close();
+        }
+        return intResult;
+    }
+
+
+    public static DataTable getBatchDtls(long lngBatchID)
+    {
+        long lngBacthId = 1;
+        DataTable dt = new DataTable();
+        try
+        {
+            npgsqlConn = new NpgsqlConnection(strCCILConnString);
+            if (npgsqlConn.State == ConnectionState.Closed) npgsqlConn.Open();
+            StringBuilder sb = new StringBuilder();
+            sb.Append("  SELECT rbm_cersai_batch_id, rbm_cersai_batch_count, rbm_cersai_batch_status, ");
+            sb.Append(" rbm_cersai_batch_filename,  rbm_cersai_batch_remark, rbm_created_on, rbm_created_by ");
+            sb.Append(" FROM rd_batch_mst where rbm_cersai_batch_status=2 and rbm_cersai_batch_id=" + lngBatchID + "  order by rbm_cersai_batch_id desc ");
+
+            NpgsqlDataAdapter objDataAdapter = new NpgsqlDataAdapter(sb.ToString(), npgsqlConn);
+            objDataAdapter.Fill(dt);
+
+        }
+        catch (Exception ex)
+        {
+            Common.WriteErrorsToTextFile("dataAccess.cs", "dataAccess.getBatchDtls", ex.Message, HttpContext.Current.Session["UserId"].ToString(), HttpContext.Current.Session["IP_Address"].ToString());
+        }
+        finally
+        {
+            if (npgsqlConn.State == ConnectionState.Open) npgsqlConn.Close();
+        }
+        return dt;
+    }
+
+    public static int UpdateResponseFile(string[] strLines, long lngBatchNumber)
+    {
+        int intResult = 0;
+        string strCersaiCkycNo = null;
+        string strQry = null;
+        try
+        {
+            int intStatus = 0;
+            int intCersaiStatus = 0;
+            int intAppStatus = 1;
+            string strSignzyCkycNo = null;
+            //string strCersaiCkycNo = null;
+            string strCersaiResRmrk = null;
+            npgsqlConn = new NpgsqlConnection(strCCILConnString);
+            if (npgsqlConn.State == ConnectionState.Closed) npgsqlConn.Open();
+
+            foreach (string line in strLines)
+            {
+                StringBuilder sb = new StringBuilder();
+                string[] multiArray = line.Split(new Char[] { '|' });
+                //if ((Convert.ToInt32(multiArray[0].ToString())) == 10)
+                //{
+                //    lngBatchNumber = Convert.ToInt32(multiArray[1].ToString());
+                //    //break;
+                //}
+                //else 
+                if ((Convert.ToInt32(multiArray[0].ToString())) == 20)
+                {
+                    intStatus = Convert.ToInt32(multiArray[3].ToString());
+                    strSignzyCkycNo = multiArray[4].ToString();
+                    strCersaiCkycNo = multiArray[5].ToString();
+                    strCersaiResRmrk = multiArray[6].ToString().Replace("'", "");
+                }
+                if (intStatus > 0)
+                {
+                    if (intStatus == 01)
+                    {
+                        intCersaiStatus = 3;
+                    }
+                    else if (intStatus == 03)
+                    {
+                        if (strCersaiResRmrk.Contains("There should be atleast one 30 Type Record, 70 Type Record should be provided,Please Enter  Constitution Type,Please enter Applicant Name Prefix,Please upload 20 type record with exact number of fillers"))
+                        {
+                            intCersaiStatus = -3;
+                        }
+                        else if (strCersaiResRmrk.Contains("Either  Father/Spouse name or Mother name details are mandatory. Please provide either of these values, Flag indicating Father or Spouse name is empty"))
+                        {
+                            intCersaiStatus = -3;
+                        }
+                        else if (strCersaiResRmrk.Contains("Image Type is not proper"))
+                        {
+                            intCersaiStatus = -3;
+                        }
+                        else if (strCersaiResRmrk.Contains("Please enter Applicant Name Prefix"))
+                        {
+                            intCersaiStatus = -3;
+                        }
+                        else if (strCersaiResRmrk.Contains("There should be atleast one 30 Type Record"))
+                        {
+                            intCersaiStatus = -3;
+                        }
+                        else if (strCersaiResRmrk.Contains("Father/Spouse name or Mother name details are mandatory"))
+                        {
+                            intCersaiStatus = -3;
+                        }
+                        else if (strCersaiResRmrk.Contains("70 Type Record should be provided"))
+                        {
+                            intCersaiStatus = -3;
+                        }
+                        else if (strCersaiResRmrk.Contains("Flag indicating Father or Spouse name is empty"))
+                        {
+                            intCersaiStatus = -3;
+                        }
+                        else
+                        {
+                            intCersaiStatus = 4;
+                        }
+                    }
+                    else
+                    {
+                        intCersaiStatus = -3;
+                    }
+                    sb.Append(" UPDATE rd_application_dtls  SET  ");
+                    sb.Append(" rad_cersai_ckyc_reference_no ='" + strCersaiCkycNo + "', rad_cersai_batch_response_dtls='" + strCersaiResRmrk + "', ");
+                    sb.Append("rad_cersai_batch_status ='" + intCersaiStatus + "' ,rad_cersai_batch_remark='Response File Uploaded',");
+                    sb.Append(" rad_cersai_batch_response_date=now(), rad_update_on=now(), rad_updated_by='" + HttpContext.Current.Session["UserId"].ToString() + "'");
+                    //sb.Append(" WHERE rad_cersai_batch_id=" + lngBatchNumber + " and rad_signzy_ckyc_no= '" + strSignzyCkycNo + "'");
+                    sb.Append(" WHERE rad_cersai_batch_id=" + lngBatchNumber + " and rad_cersai_reference_number= '" + strSignzyCkycNo + "'");
+                    npgcom = new NpgsqlCommand(sb.ToString(), npgsqlConn);
+
+                    strQry = sb.ToString();
+
+                    intResult = npgcom.ExecuteNonQuery();
+                    if (intResult == 0)
+                    {
+                        intAppStatus = 0;
+                        Common.WriteErrorsToTextFile("dataAccess.cs", "dataAccess.UpdateResponseFile", "| Error occured while updating in apllication details", HttpContext.Current.Session["UserId"].ToString(), HttpContext.Current.Session["IP_Address"].ToString());
+                    }
+                    else
+                    {
+                        if (intCersaiStatus == 3)
+                        {
+                            sendCersaiCKYCNoToApplicants(strSignzyCkycNo, strCersaiCkycNo, strCersaiResRmrk, lngBatchNumber);
+                        }
+                    }
+                }
+            }
+            if (intAppStatus == 1)
+            {
+                StringBuilder sb = new StringBuilder();
+                sb.Append(" UPDATE rd_batch_mst  SET  ");
+                sb.Append(" rbm_cersai_batch_status =3, rbm_cersai_batch_response_date=now(), rbm_cersai_batch_remark= 'Response file uploaded'");
+                sb.Append(" WHERE rbm_cersai_batch_id=" + lngBatchNumber + " and rbm_cersai_batch_status =2 ");
+                npgcom = new NpgsqlCommand(sb.ToString(), npgsqlConn);
+
+                intResult = npgcom.ExecuteNonQuery();
+                if (intResult == 0)
+                {
+                    Common.WriteErrorsToTextFile("dataAccess.cs", "dataAccess.UpdateResponseFile", "| Error occured while updating in batch details", HttpContext.Current.Session["UserId"].ToString(), HttpContext.Current.Session["IP_Address"].ToString());
+                }
+            }
+        }
+
+        catch (Exception ex)
+        {
+            Common.WriteErrorsToTextFile("dataAccess.cs", "dataAccess.updateSignzyDataInDB", ex.Message + " " + strCersaiCkycNo + " " + strQry, HttpContext.Current.Session["UserId"].ToString(), HttpContext.Current.Session["IP_Address"].ToString());
+        }
+        finally
+        {
+            if (npgsqlConn.State == ConnectionState.Open) npgsqlConn.Close();
+        }
+        return intResult;
+    }
+
+    #endregion
+
+    public static DataTable getBatchID(string strBatchDate, string strPage)
+    {
+        string strBatchStatus = "(2)";
+        DataTable dt = new DataTable();
+        try
+        {
+            npgsqlConn = new NpgsqlConnection(strCCILConnString);
+            if (npgsqlConn.State == ConnectionState.Closed) npgsqlConn.Open();
+            StringBuilder sb = new StringBuilder();
+            if (strPage == "Upld")
+            {
+                strBatchStatus = "(2)";
+            }
+            else if (strPage == "Report")
+            {
+                strBatchStatus = "(2,3)";
+            }
+
+            sb.Append(" SELECT rbm_cersai_batch_id from rd_batch_mst where rbm_cersai_batch_status in " + strBatchStatus + " and to_char(rbm_created_on, 'DD/MM/YYYY') ='" + strBatchDate + "'");
+            //sb.Append(" select nextval('rd_batch_mst_seq'::regclass) ");
+
+            NpgsqlDataAdapter objDataAdapter = new NpgsqlDataAdapter(sb.ToString(), npgsqlConn);
+            objDataAdapter.Fill(dt);
+            //if (dt.Rows.Count > 0)
+            //{
+            //    lngBacthId = Convert.ToInt32(dt.Rows[0][0].ToString()) + 1;
+            //}
+            //else
+            //{
+            //    lngBacthId = 10001;
+            //}
+        }
+        catch (Exception ex)
+        {
+            Common.WriteErrorsToTextFile("dataAccess.cs", "dataAccess.getMaxBatchID", ex.Message, HttpContext.Current.Session["UserId"].ToString(), HttpContext.Current.Session["IP_Address"].ToString());
+        }
+        finally
+        {
+            if (npgsqlConn.State == ConnectionState.Open) npgsqlConn.Close();
+        }
+        return dt;
+    }
+
+    public static DataTable getUploadedBatchDtls(long lngBatchID)
+    {
+        DataTable dt = new DataTable();
+        try
+        {
+            npgsqlConn = new NpgsqlConnection(strCCILConnString);
+            if (npgsqlConn.State == ConnectionState.Closed) npgsqlConn.Open();
+            StringBuilder sb = new StringBuilder();
+            sb.Append("  SELECT rad_cersai_batch_id, rad_applicantid, rad_cersai_batch_response_date, rad_cersai_ckyc_reference_no, rad_cersai_batch_remark, rad_cersai_batch_response_dtls");
+            sb.Append(" ,rad_email_notification_flag, rad_dis_flag, rad_dis_type, rad_dis_percent, rad_dis_udid_no FROM rd_application_dtls  where rad_cersai_batch_id = " + lngBatchID + "");
+
+
+            NpgsqlDataAdapter objDataAdapter = new NpgsqlDataAdapter(sb.ToString(), npgsqlConn);
+            objDataAdapter.Fill(dt);
+
+        }
+        catch (Exception ex)
+        {
+            Common.WriteErrorsToTextFile("dataAccess.cs", "dataAccess.getBatchDtls", ex.Message, HttpContext.Current.Session["UserId"].ToString(), HttpContext.Current.Session["IP_Address"].ToString());
+        }
+        finally
+        {
+            if (npgsqlConn.State == ConnectionState.Open) npgsqlConn.Close();
+        }
+        return dt;
+    }
+
+    //public static int chkBatchIdExist(long lngBatchID)
+    //{
+    //    int intResult = 0;
+    //    DataSet dsBatchId = new DataSet();
+    //    try
+    //    {                
+    //        npgsqlConn = new NpgsqlConnection(strCCILConnString);
+    //        if (npgsqlConn.State == ConnectionState.Closed) npgsqlConn.Open();
+    //        StringBuilder sb = new StringBuilder();
+    //        sb.Append("SELECT func_checkBatchIdExist(" + lngBatchID + ")");
+    //        npgcom = new NpgsqlCommand(sb.ToString(), npgsqlConn);
+    //        npgcom.CommandType = CommandType.Text;
+    //        npgreader = npgcom.ExecuteReader();
+
+    //        if (npgreader.HasRows == true)
+    //        {
+    //            while (npgreader.Read())
+    //            {
+    //                intResult = Convert.ToInt16(npgreader[0]);
+    //            }
+    //            npgreader.Close();
+    //        }
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //    }
+    //    return intResult;
+    //}
+
+    public static void sendCersaiCKYCNoToApplicants(string strSignzyCkycNo, string strCersaiCkycNo, string strCersaiResRmrk, long lngBatchID)
+    {
+        try
+        {
+            DataTable dt = new DataTable();
+            //npgsqlConn = new NpgsqlConnection(strCCILConnString);
+            //if (npgsqlConn.State == ConnectionState.Closed) npgsqlConn.Open();
+            StringBuilder sb = new StringBuilder();
+            sb.Append("  SELECT rad_name,rad_cersai_batch_id, rad_applicantid, rad_email, rad_cersai_batch_response_date, rad_cersai_ckyc_reference_no, rad_cersai_batch_remark, rad_cersai_batch_response_dtls");
+            //sb.Append(" FROM rd_application_dtls where rad_cersai_batch_id=" + lngBatchID + " AND rad_cersai_ckyc_reference_no='" + strCersaiCkycNo + "' ");
+            //sb.Append(" AND  rad_signzy_ckyc_no = '" + strSignzyCkycNo + "' AND rad_cersai_batch_status=3 ");
+            sb.Append(" FROM rd_application_dtls where rad_cersai_batch_id=" + lngBatchID + " AND rad_cersai_reference_number='" + strSignzyCkycNo + "' AND rad_cersai_batch_status=3");
+            //sb.Append(" AND rad_cersai_reference_number = '" + strSignzyCkycNo + "' AND rad_cersai_batch_status=3 ");
+
+            NpgsqlDataAdapter objDataAdapter = new NpgsqlDataAdapter(sb.ToString(), npgsqlConn);
+            objDataAdapter.Fill(dt);
+            if (dt.Rows.Count == 1)
+            {
+                Boolean blnMailSent = false;
+                string strApplicantName = dt.Rows[0]["rad_name"].ToString();
+                string strApplicantEmailId = dt.Rows[0]["rad_email"].ToString();
+                //string strApplicantEmailId = "vchavan@ccilindia.in";
+                string strApplicantID = dt.Rows[0]["rad_applicantid"].ToString();
+                string strCKYCRefNo = dt.Rows[0]["rad_cersai_ckyc_reference_no"].ToString();
+                //string strMessage = "Retail Direct Applicant ID - '" + strApplicantID + "' Updated CKYC Reference is '" + strCKYCRefNo + "'";
+                string strMessage = "Dear " + strApplicantName + ",<br /> <br />As you are aware that the Government of India has authorised the Central Registry of Securitisation Asset Reconstruction and Security Interest of India (CERSAI), to act as, and to perform the functions of the CKYCR vide Gazette Notification No. S.O. 3183(E) dated November 26, 2015 as also in terms of provision of Rule 9(1A) of PML Rules, the REs shall capture customer’s KYC records and upload onto CKYCR portal. <br /> <br /> Accordingly, we have uploaded your KYC records onto CKYCR portal of CERSAI. Your unique KYC identifier issued by the Central KYC Registry is '" + strCKYCRefNo + "'";
+                blnMailSent = Common.sendMailToApplicants(strApplicantEmailId, strApplicantID, strMessage, blnMailSent);
+
+                if (blnMailSent == true)
+                {
+                    sb = new StringBuilder();
+                    sb.Append(" UPDATE rd_application_dtls  SET  ");
+                    sb.Append(" rad_email_notification_flag ='Y', rad_email_sent_date=now(), ");
+                    sb.Append(" rad_update_on=now(), rad_updated_by='" + HttpContext.Current.Session["UserId"].ToString() + "'");
+                    //sb.Append(" WHERE rad_cersai_batch_id=" + lngBatchID + " and rad_signzy_ckyc_no= '" + strSignzyCkycNo + "' AND rad_cersai_ckyc_reference_no='" + strCersaiCkycNo + "' ");
+                    sb.Append(" WHERE rad_cersai_batch_id=" + lngBatchID + " and rad_cersai_reference_number = '" + strSignzyCkycNo + "' ");
+                }
+                else
+                {
+                    sb = new StringBuilder();
+                    sb.Append(" UPDATE rd_application_dtls  SET  ");
+                    sb.Append(" rad_email_notification_flag = 'N',  ");
+                    sb.Append(" rad_update_on=now(), rad_updated_by='" + HttpContext.Current.Session["UserId"].ToString() + "'");
+                    //sb.Append(" WHERE rad_cersai_batch_id=" + lngBatchID + " and rad_signzy_ckyc_no= '" + strSignzyCkycNo + "' AND rad_cersai_ckyc_reference_no='" + strCersaiCkycNo + "' ");
+                    sb.Append(" WHERE rad_cersai_batch_id=" + lngBatchID + " and rad_cersai_reference_number = '" + strSignzyCkycNo + "' ");
+                }
+
+                npgcom = new NpgsqlCommand(sb.ToString(), npgsqlConn);
+
+                int intResult = npgcom.ExecuteNonQuery();
+                if (intResult == 0)
+                {
+                    Common.WriteErrorsToTextFile("dataAccess.cs", "dataAccess.sendCersaiCKYCNoToApplicants", "| Error occured while Updating Email Flag", HttpContext.Current.Session["UserId"].ToString(), HttpContext.Current.Session["IP_Address"].ToString());
+                }
+
+                //Common.WriteErrorsToTextFile("dataAccess.cs", "dataAccess.sendCersaiCKYCNoToApplicants", "email status '" + blnMailSent + "'", HttpContext.Current.Session["UserId"].ToString(), HttpContext.Current.Session["IP_Address"].ToString());
+            }
+        }
+        catch (Exception ex)
+        {
+            Common.WriteErrorsToTextFile("dataAccess.cs", "dataAccess.sendCersaiCKYCNoToApplicants", ex.Message, HttpContext.Current.Session["UserId"].ToString(), HttpContext.Current.Session["IP_Address"].ToString());
+
+        }
+        //finally
+        //{
+        //    if (npgsqlConn.State == ConnectionState.Open) npgsqlConn.Close();
+        //}
+    }
+
+    public static int UpdateBatchDetailCount(DataTable dtApplicationDetails, long lngBatchId, int intBatchCount)
+    {
+        int intResult = 0;
+        try
+        {
+            npgsqlConn = new NpgsqlConnection(strCCILConnString);
+            if (npgsqlConn.State == ConnectionState.Closed) npgsqlConn.Open();
+            StringBuilder sb = new StringBuilder();
+
+            sb.Append(" UPDATE rd_batch_mst  SET  ");
+            sb.Append(" rbm_cersai_batch_count = '" + intBatchCount + "' ");
+            sb.Append(" WHERE rbm_cersai_batch_id=" + lngBatchId + " and rbm_cersai_batch_status=1");
+            npgcom = new NpgsqlCommand(sb.ToString(), npgsqlConn);
+
+            intResult = npgcom.ExecuteNonQuery();
+            if (intResult == 0)
+            {
+                Common.WriteErrorsToTextFile("dataAccess.cs", "dataAccess.UpdateBatchDetailCount", "| Error occured while Insertion", HttpContext.Current.Session["UserId"].ToString(), HttpContext.Current.Session["IP_Address"].ToString());
+            }
+            else
+            {
+                int intResult2 = UpdateCersaiBatchIDDetails(lngBatchId, dtApplicationDetails);
+            }
+        }
+
+        catch (Exception ex)
+        {
+            Common.WriteErrorsToTextFile("dataAccess.cs", "dataAccess.GenerateBatchID", ex.Message, HttpContext.Current.Session["UserId"].ToString(), HttpContext.Current.Session["IP_Address"].ToString());
+        }
+        finally
+        {
+            if (npgsqlConn.State == ConnectionState.Open) npgsqlConn.Close();
+        }
+
+        return intResult;
+    }
+}
