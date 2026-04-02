@@ -1,0 +1,86 @@
+-- PROCEDURE: public.sp_updatesignzydata(character, character varying, character varying, character, character varying, character varying, date, character varying, character, jsonb, jsonb, character, timestamp without time zone, text, character varying, numeric, character varying)
+
+-- DROP PROCEDURE IF EXISTS public.sp_updatesignzydata(character, character varying, character varying, character, character varying, character varying, date, character varying, character, jsonb, jsonb, character, timestamp without time zone, text, character varying, numeric, character varying);
+
+CREATE OR REPLACE PROCEDURE public.sp_updatesignzydata(
+	IN signzyflag character,
+	IN signzy_application_type character varying,
+	IN signzy_constitution_type character varying,
+	IN signzy_kyc_type character,
+	IN signzy_applicant_prefix character varying,
+	IN signzy_applicant_name character varying,
+	IN signzy_applicant_dob date,
+	IN signzy_applicant_pan character varying,
+	IN signzy_address_change_flag character,
+	IN signzy_request jsonb,
+	IN signzy_response jsonb,
+	IN signzy_document_flag character,
+	IN signzy_fetched_date timestamp without time zone,
+	IN signzy_remark text,
+	IN updated_by character varying,
+	IN applicantid numeric,
+	IN signzy_ckyc_no character varying)
+LANGUAGE 'plpgsql'
+AS $BODY$
+DECLARE
+    _sql_state TEXT;
+    _message TEXT;
+    _detail TEXT;
+    _hint TEXT;
+    _context TEXT;
+begin   
+IF (signzyflag='Y') THEN
+UPDATE public.rd_application_dtls SET 
+rad_signzy_flag=signzyflag, 
+rad_signzy_application_type=signzy_application_type, 
+rad_signzy_constitution_type=signzy_constitution_type, 
+rad_signzy_kyc_type=signzy_kyc_type, 
+rad_signzy_applicant_prefix=signzy_applicant_prefix, 
+rad_signzy_applicant_name=signzy_applicant_name, 
+rad_signzy_applicant_dob=signzy_applicant_dob, 
+rad_signzy_applicant_pan=signzy_applicant_pan, 
+rad_signzy_address_change_flag=signzy_address_change_flag, 
+rad_signzy_request=signzy_request, 
+rad_signzy_response=signzy_response,
+rad_signzy_document_flag=signzy_document_flag, 
+rad_signzy_fetched_date=signzy_fetched_date, 
+rad_signzy_remark=signzy_remark,  
+rad_update_on=now(), rad_updated_by=updated_by,
+rad_signzy_ckyc_no=signzy_ckyc_no
+WHERE rad_applicantid=applicantid AND rad_signzy_flag='N' ;
+
+ELSEIF  (signzyflag='N') THEN
+
+UPDATE public.rd_application_dtls SET  
+rad_signzy_flag=signzyflag,   
+rad_signzy_request=signzy_request,
+rad_signzy_response=signzy_response,
+rad_signzy_document_flag=signzy_document_flag, 
+rad_signzy_remark=signzy_remark,
+rad_update_on=now(), rad_updated_by=updated_by  
+WHERE rad_applicantid=applicantid AND rad_signzy_flag='N' ;
+END IF;
+  
+ 
+	
+	
+		  EXCEPTION
+    WHEN OTHERS THEN
+        GET STACKED DIAGNOSTICS
+             _sql_state := RETURNED_SQLSTATE,
+            _message := MESSAGE_TEXT  ,
+            _detail := PG_EXCEPTION_DETAIL,
+            _hint := PG_EXCEPTION_HINT,
+            _context := PG_EXCEPTION_CONTEXT;
+            
+
+				INSERT INTO rd_error_logs(
+	rel_page, rel_function, rel_errordesc, rel_userid, rel_ip, rel_created_date, rel_created_by)
+	VALUES ('sp_updatesignzydata','sp_updatesignzydata', _message,user, '',  now(), updated_by);
+				
+	
+end;
+$BODY$;
+ALTER PROCEDURE public.sp_updatesignzydata(character, character varying, character varying, character, character varying, character varying, date, character varying, character, jsonb, jsonb, character, timestamp without time zone, text, character varying, numeric, character varying)
+    OWNER TO pg_database_owner;
+
